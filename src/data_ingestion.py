@@ -61,7 +61,7 @@ def save_data(train_data: pd.DataFrame, test_data: pd.DataFrame, data_path: str)
 
 def main():
     try:
-        test_size = 0.2  # Set the proportion of the dataset to include in the test split (20%)
+        test_size = 0.30  # Set the proportion of the dataset to include in the test split (20%)
         data_path = 'https://raw.githubusercontent.com/vikashishere/Datasets/main/spam.csv'  # Define the URL of the raw data
         df = load_data(data_url=data_path)  # Call load_data function to fetch the data
         final_df = preprocess_data(df)  # Call preprocess_data function to rename columns
