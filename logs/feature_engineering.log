@@ -1,0 +1,13 @@
+2026-07-16 22:51:01,252 - feature_engineering - DEBUG - Parameters loaded from params.yaml
+2026-07-16 22:51:01,313 - feature_engineering - DEBUG - Data loaded and NaNs filled from ./data/interim/train_processed.csv
+2026-07-16 22:51:01,328 - feature_engineering - ERROR - Unexpected error occurred while loading the data: Invalid value '' for dtype 'float64'
+2026-07-16 22:51:01,330 - feature_engineering - ERROR - Failed to complete the feature engineering process: Invalid value '' for dtype 'float64'
+2026-07-17 10:01:39,278 - feature_engineering - ERROR - Failed to load params from params.yaml: [Errno 2] No such file or directory: 'params.yaml'
+2026-07-17 10:01:39,280 - feature_engineering - ERROR - Failed to complete the feature engineering process: [Errno 2] No such file or directory: 'params.yaml'
+2026-07-17 10:02:34,854 - feature_engineering - DEBUG - Parameters loaded from params.yaml
+2026-07-17 10:02:34,917 - feature_engineering - DEBUG - Data loaded and NaNs filled from ./data/interim/train_processed.csv
+2026-07-17 10:02:34,930 - feature_engineering - DEBUG - Data loaded and NaNs filled from ./data/interim/test_processed.csv
+2026-07-17 10:02:35,820 - feature_engineering - DEBUG - TF-IDF applied: train shape=(4152, 5000), test shape=(1101, 5000)
+2026-07-17 10:03:03,292 - feature_engineering - DEBUG - Data saved to ./data\processed\train_tfidf.csv
+2026-07-17 10:03:11,559 - feature_engineering - DEBUG - Data saved to ./data\processed\test_tfidf.csv
+2026-07-17 10:03:11,560 - feature_engineering - INFO - Feature engineering completed successfully!
