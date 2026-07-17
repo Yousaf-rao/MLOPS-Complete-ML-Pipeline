@@ -1,0 +1,248 @@
+====================================================================
+   DVC + GIT PRACTICAL WALKTHROUGH — TIME MACHINE FOR ML EXPERIMENTS
+   Project: MLOPS-Complete-ML-Pipeline
+====================================================================
+
+Is walkthrough mein humne practically demonstrate kiya ke DVC aur Git
+milkar kaise kaam karte hain taake aap apne ML experiments ko version
+control kar sakein aur kisi bhi purani state pe wapas ja sakein.
+
+--------------------------------------------------------------------
+PART 1: SETUP — dvc.yaml aur Pipeline
+--------------------------------------------------------------------
+
+FILE: dvc.yaml
+--------------
+Yeh file aapke poore ML pipeline ka blueprint hai. Isme stages define
+hote hain — kaunsi script kaise chale, kya le aur kya produce kare.
+
+Hamare pipeline ke 5 stages hain:
+
+  1. data_ingestion    → python src/data_ingestion.py
+                         Input:  Internet se spam.csv download karta hai
+                         Output: data/raw/ folder (train.csv, test.csv)
+
+  2. data_preprocessing → python src/data_processing.py
+                         Input:  data/raw/
+                         Output: data/interim/ (cleaned text data)
+
+  3. feature_engineering → python src/feature_engnering.py
+                         Input:  data/interim/
+                         Output: data/processed/ (TF-IDF features)
+
+  4. model_building    → python src/model_training.py
+                         Input:  data/processed/
+                         Output: models/model.pkl
+
+  5. model_evaluation  → python src/model_evaluation.py
+                         Input:  models/model.pkl
+                         Output: reports/metrics.json
+
+dvc.yaml ka example:
+
+    stages:
+      data_ingestion:
+        cmd: python src/data_ingestion.py
+        deps:
+        - src/data_ingestion.py
+        outs:
+        - data/raw
+
+
+--------------------------------------------------------------------
+PART 2: dvc.lock — The "Receipt" File
+--------------------------------------------------------------------
+
+Jab aap "dvc repro" chalate hain, DVC ek file likhta hai: dvc.lock
+
+Yeh file har stage ke liye record karti hai:
+  - Konsa script chali (MD5 hash)
+  - Kya output bana (MD5 hash of output folder/file)
+  - File ka size
+
+dvc.lock ka example (hamara actual output):
+
+    schema: '2.0'
+    stages:
+      data_ingestion:
+        cmd: python src/data_ingestion.py
+        deps:
+        - path: src/data_ingestion.py
+          hash: md5
+          md5: 16ffa85c8042e0aca762fa7813327f9d   <-- script ka fingerprint
+          size: 5135
+        outs:
+        - path: data/raw
+          hash: md5
+          md5: 2e6b4e7ba49b8a441f9a76c58fe7e166.dir  <-- output data ka fingerprint
+          size: 504947
+
+Jab MD5 hash same hota hai, DVC jaanta hai ke kuch nahi badla
+aur stage ko skip kar deta hai (cache se results lata hai).
+
+
+--------------------------------------------------------------------
+PART 3: EXPERIMENT 1 — test_size = 0.30
+--------------------------------------------------------------------
+
+STEP 1: data_ingestion.py mein badlao kiya
+  File: src/data_ingestion.py, Line 64
+  Change: test_size = 0.30
+
+STEP 2: Pipeline chalaya
+  Command:
+    dvc repro
+
+  Output:
+    Running stage 'data_ingestion':
+    > python src/data_ingestion.py
+    2026-07-17 - data_ingestion - DEBUG - Data loaded from URL
+    2026-07-17 - data_ingestion - DEBUG - Train and test data saved to ./data\raw
+    Updating lock file 'dvc.lock'
+    ... (baqi stages bhi chale)
+    Use `dvc push` to send your updates to remote storage.
+
+STEP 3: Git mein save kiya (commit)
+  Command:
+    git add dvc.lock src/data_ingestion.py
+    git commit -m "experiment: test_size=0.30"
+
+  Output:
+    [main c4267a3] experiment: test_size=0.30
+    2 files changed, 85 insertions(+), 1 deletion(-)
+    create mode 100644 dvc.lock
+
+  >> Git ne dvc.lock ko code ke sath save kar liya.
+     ab c4267a3 is experiment ki permanent ID hai.
+
+
+--------------------------------------------------------------------
+PART 4: EXPERIMENT 2 — test_size = 0.21
+--------------------------------------------------------------------
+
+STEP 1: data_ingestion.py mein badlao kiya
+  Change: test_size = 0.21
+
+STEP 2: Pipeline chalaya
+  Command:
+    dvc repro
+
+  Output:
+    Stage 'data_ingestion' is cached - skipping run, checking out outputs
+    Updating lock file 'dvc.lock'
+    ... (saare stages cached the kyunke 0.21 pehle bhi chala tha)
+
+  >> DVC ne cache se results restore kiye — no re-run needed!
+
+STEP 3: Git commit
+  Command:
+    git add dvc.lock src/data_ingestion.py
+    git commit -m "experiment: test_size=0.21"
+
+  Output:
+    [main 60be543] experiment: test_size=0.21
+    2 files changed, 18 insertions(+), 18 deletions(-)
+
+
+--------------------------------------------------------------------
+PART 5: GIT LOG — Saare Experiments Dekho
+--------------------------------------------------------------------
+
+Command:
+  git log --oneline -5
+
+Output:
+  60be543  experiment: test_size=0.21    <-- latest (current)
+  c4267a3  experiment: test_size=0.30    <-- purana experiment
+  65e59f7  Add MLOps pipeline components
+  f411068  Initial commit
+
+>> Har line ek commit hai. Leftside ka 7-digit code "commit hash" hai.
+   Isko use karke aap kisi bhi point pe wapas ja sakte hain.
+
+
+--------------------------------------------------------------------
+PART 6: TIME MACHINE — Purani State Pe Wapas Jana
+--------------------------------------------------------------------
+
+Hum purana experiment (test_size=0.30, commit: c4267a3) restore kiya.
+
+STEP 1: Code wapas kiya
+  Command:
+    git checkout c4267a3 -- src/data_ingestion.py dvc.lock
+
+  Kya hua:
+    - src/data_ingestion.py mein test_size automatically 0.30 ho gaya
+    - dvc.lock bhi 0.30 wale run ki receipt pe wapas aa gaya
+
+STEP 2: Data bhi wapas kiya
+  Command:
+    dvc checkout
+
+  Output:
+    M    data\interim\        <-- purana processed data restore hua
+    M    data\processed\      <-- purani TF-IDF features restore hui
+    M    data\raw\            <-- purana 0.30 split wala raw data restore hua
+    M    models\model.pkl     <-- purana model restore hua
+    M    reports\metrics.json <-- purani metrics restore hui
+
+  Verification:
+    src\data_ingestion.py:64:  test_size = 0.30  ✅ CONFIRMED!
+
+>> Bina kuch dobara download ya process kiye — puri state wapas!
+
+
+--------------------------------------------------------------------
+PART 7: CACHING EXPLAINED — "is cached" kyun dikhta hai?
+--------------------------------------------------------------------
+
+DVC ki cache: .dvc/cache/ folder mein hoti hai.
+Har file ka ek unique MD5 hash hota hai.
+
+Jab aap pipeline chalaate hain:
+  - DVC check karta hai: kya yeh output pehle bhi bana tha?
+  - Agar haan → Cache se restore karta hai (fast!) ✅
+  - Agar nahi → Script chalata hai (slow, but necessary) 🔄
+
+Example:
+  - test_size=0.21 → pehle chala tha → "is cached - skipping"
+  - test_size=0.30 → naya tha → "Running stage 'data_ingestion'"
+  - test_size=0.21 wapas → cache mein hai → "is cached - skipping"
+
+Yahi DVC ka sabse bada faida hai — experiments fast hote hain!
+
+
+--------------------------------------------------------------------
+PART 8: COMPLETE WORKFLOW SUMMARY
+--------------------------------------------------------------------
+
+Naya Experiment Karne Ka Tarika:
+
+  1. Apni script mein badlao karo (e.g., test_size, n_estimators)
+  2. dvc repro           → pipeline chalao
+  3. git add dvc.lock src/<changed_file>.py
+  4. git commit -m "experiment: <kya badla aur kyon>"
+
+Purani State Pe Wapas Jane Ka Tarika:
+
+  1. git log --oneline   → saare experiments dekho
+  2. git checkout <hash> -- src/<file>.py dvc.lock
+  3. dvc checkout        → data bhi restore ho jayega
+
+Useful Commands Quick Reference:
+
+  dvc repro              → poori pipeline chalao
+  dvc repro -f           → force run (cache ignore karo)
+  dvc status             → dekho kya badla hai
+  dvc checkout           → dvc.lock ke mutabiq data restore karo
+  dvc metrics show       → current metrics dekho
+  dvc params diff        → params mein kya farq hai
+  dvc plots show         → training plots HTML mein dekho
+  git log --oneline      → saare commits (experiments) dekho
+
+====================================================================
+KEY INSIGHT:
+  Git  → Code + dvc.lock (lightweight receipt) save karta hai
+  DVC  → Actual large data files cache mein save karta hai
+  Dono milkar → Complete ML experiment history bante hain
+====================================================================

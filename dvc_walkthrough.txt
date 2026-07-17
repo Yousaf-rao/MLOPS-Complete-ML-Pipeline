@@ -1,0 +1,80 @@
+# DVC Walkthrough: Understanding `dvc.yaml`
+
+This document provides a comprehensive guide to understanding what `dvc.yaml` is, why it is used, and how it works in the context of your Machine Learning Operations (MLOps) pipeline.
+
+---
+
+## 1. What is `dvc.yaml`?
+**DVC (Data Version Control)** is a tool built to make ML models reproducible and trackable. 
+The `dvc.yaml` file is the core configuration file used by DVC to define and manage **ML pipelines**, **experiment tracking**, and **metrics/parameters**.
+
+Think of it as a Makefile or GitHub Actions workflow file, but specifically designed for Machine Learning. It tells DVC:
+- What steps to run in your pipeline (e.g., data preparation, training, evaluation).
+- What files each step depends on (dependencies).
+- What outputs each step produces (models, processed data).
+- Which metrics and parameters to track.
+
+---
+
+## 2. Why use `dvc.yaml`?
+In standard software engineering, Git handles code versioning perfectly. However, Git is not built to handle large datasets, model weights, or easily compare ML experiment results. `dvc.yaml` solves this by offering:
+
+1. **Reproducibility:** Anyone cloning your repository can run `dvc repro` to run the entire pipeline from start to finish, exactly as you did.
+2. **Experiment Tracking:** It automatically tracks parameters (like learning rate, epochs) and metrics (like accuracy, loss) across different runs, allowing you to easily compare them.
+3. **Caching / Time Saving:** DVC is smart. If you rerun your pipeline but haven't changed the data or code for a specific stage, DVC skips that stage and uses cached results.
+4. **Data Management:** Keeps your Git repository lightweight by storing data pointers instead of actual large data files.
+
+---
+
+## 3. How does it work?
+Your current `dvc.yaml` file leverages **DVCLive**, which is an auto-logging library for DVC. Let's break down your specific configuration:
+
+```yaml
+params:
+- dvclive/params.yaml
+metrics:
+- dvclive/metrics.json
+plots:
+- dvclive/plots/metrics:
+    x: step
+```
+
+### Breakdown of your current setup:
+- **`params:`** Tells DVC where to look for your hyperparameters. In your case, it's tracking `dvclive/params.yaml`. If you change a parameter (like batch size) and run an experiment, DVC will record that change.
+- **`metrics:`** Points DVC to `dvclive/metrics.json`. This file contains the final evaluation metrics of your model (e.g., precision, recall). You can use `dvc metrics show` in your terminal to see them.
+- **`plots:`** Instructs DVC to generate visualizations from your training logs located in `dvclive/plots/metrics`. The `x: step` means the x-axis of your generated plots will represent the training steps/epochs. You can view these plots using `dvc plots show`.
+
+### Adding Pipeline Stages (How to expand it)
+Right now, your file is mainly used for **Experiment Tracking**. Usually, a `dvc.yaml` also contains a `stages:` section to define the actual pipeline. Here is an example of how you could expand it in the future:
+
+```yaml
+stages:
+  prepare_data:
+    cmd: python src/prepare.py
+    deps:
+      - data/raw_data.csv
+      - src/prepare.py
+    outs:
+      - data/processed_data.csv
+
+  train_model:
+    cmd: python src/train.py
+    deps:
+      - data/processed_data.csv
+      - src/train.py
+    params:
+      - learning_rate
+      - epochs
+    outs:
+      - models/model.pkl
+```
+- **`cmd`**: The terminal command to run.
+- **`deps`**: Files this stage depends on. If these don't change, the stage is skipped next time.
+- **`outs`**: Files created by this stage.
+
+## 4. Useful DVC Commands
+- `dvc repro`: Runs the pipeline defined in `dvc.yaml`.
+- `dvc exp run`: Runs a new experiment and tracks the metrics/parameters.
+- `dvc metrics show`: Displays the metrics from your current run.
+- `dvc params diff`: Compares parameters between different experiments or commits.
+- `dvc plots show`: Generates HTML files with your plots.

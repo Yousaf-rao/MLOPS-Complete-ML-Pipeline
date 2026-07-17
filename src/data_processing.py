@@ -6,9 +6,13 @@ from nltk.stem.porter import PorterStemmer
 from nltk.corpus import stopwords
 import string
 import nltk
-nltk.download('stopwords')
-nltk.download('punkt')
-nltk.download('punkt_tab')
+nltk.download('stopwords', quiet=True)
+nltk.download('punkt', quiet=True)
+nltk.download('punkt_tab', quiet=True)
+
+# Load once at module level to avoid repeated file reads inside loops
+STOP_WORDS = set(stopwords.words('english'))
+PS = PorterStemmer()
 
 # Ensure the "logs" directory exists
 log_dir = 'logs'
@@ -36,20 +40,18 @@ def transform_text(text):
     """
     Transforms the input text by converting it to lowercase, tokenizing, removing stopwords and punctuation, and stemming.
     """
-    ps = PorterStemmer()
     # Convert to lowercase
     text = text.lower()
     # Tokenize the text
     text = nltk.word_tokenize(text)
     # Remove non-alphanumeric tokens
     text = [word for word in text if word.isalnum()]
-    # Remove stopwords and punctuation
-    text = [word for word in text if word not in stopwords.words('english') and word not in string.punctuation]
+    # Remove stopwords and punctuation (uses pre-loaded set for performance)
+    text = [word for word in text if word not in STOP_WORDS and word not in string.punctuation]
     # Stem the words
-    text = [ps.stem(word) for word in text]
+    text = [PS.stem(word) for word in text]
     # Join the tokens back into a single string
     result = " ".join(text)
-    print(f"Output: {result}")
     return result
 
 def preprocess_df(df, text_column='text', target_column='target'):
@@ -103,11 +105,14 @@ def main(text_column='text', target_column='target'):
         logger.debug('Processed data saved to %s', data_path)
     except FileNotFoundError as e:
         logger.error('File not found: %s', e)
+        raise
     except pd.errors.EmptyDataError as e:
         logger.error('No data: %s', e)
+        raise
     except Exception as e:
         logger.error('Failed to complete the data transformation process: %s', e)
         print(f"Error: {e}")
+        raise
 
 if __name__ == '__main__':
     main()
