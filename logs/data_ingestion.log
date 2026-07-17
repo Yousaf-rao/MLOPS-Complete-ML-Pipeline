@@ -10,3 +10,8 @@
 2026-07-17 23:23:37,190 - data_ingestion - DEBUG - Data loaded from https://raw.githubusercontent.com/vikashishere/Datasets/main/spam.csv
 2026-07-17 23:23:37,206 - data_ingestion - DEBUG - Data preprocessing completed
 2026-07-17 23:23:37,342 - data_ingestion - DEBUG - Train and test data saved to ./data\raw
+2026-07-18 00:15:46,691 - data_ingestion - ERROR - Failed to complete the data ingestion process: name 'yaml' is not defined
+2026-07-18 00:17:00,283 - data_ingestion - DEBUG - Parameters retrieved from params.yaml
+2026-07-18 00:17:07,402 - data_ingestion - DEBUG - Data loaded from https://raw.githubusercontent.com/vikashishere/Datasets/main/spam.csv
+2026-07-18 00:17:07,408 - data_ingestion - DEBUG - Data preprocessing completed
+2026-07-18 00:17:07,509 - data_ingestion - DEBUG - Train and test data saved to ./data\raw

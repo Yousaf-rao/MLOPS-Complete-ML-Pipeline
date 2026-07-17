@@ -32,3 +32,10 @@
 2026-07-17 23:24:28,863 - feature_engineering - DEBUG - Data saved to ./data\processed\train_tfidf.csv
 2026-07-17 23:24:46,236 - feature_engineering - DEBUG - Data saved to ./data\processed\test_tfidf.csv
 2026-07-17 23:24:46,237 - feature_engineering - INFO - Feature engineering completed successfully!
+2026-07-18 00:17:22,171 - feature_engineering - DEBUG - Parameters loaded from params.yaml
+2026-07-18 00:17:22,204 - feature_engineering - DEBUG - Data loaded and NaNs filled from ./data/interim/train_processed.csv
+2026-07-18 00:17:22,225 - feature_engineering - DEBUG - Data loaded and NaNs filled from ./data/interim/test_processed.csv
+2026-07-18 00:17:22,348 - feature_engineering - DEBUG - TF-IDF applied: train shape=(4152, 50), test shape=(1101, 50)
+2026-07-18 00:17:22,553 - feature_engineering - DEBUG - Data saved to ./data\processed\train_tfidf.csv
+2026-07-18 00:17:22,625 - feature_engineering - DEBUG - Data saved to ./data\processed\test_tfidf.csv
+2026-07-18 00:17:22,625 - feature_engineering - INFO - Feature engineering completed successfully!
