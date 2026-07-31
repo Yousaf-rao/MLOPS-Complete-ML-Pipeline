@@ -1,0 +1,383 @@
+================================================================================
+         MLOPS COMPLETE GUIDE — Git + DVC Working & All Commands
+         Written for: MLOPS-Complete-ML-Pipeline Project
+         Purpose: Reference guide to understand the full project workflow
+================================================================================
+
+
+================================================================================
+SECTION 1: PROJECT STRUCTURE
+================================================================================
+
+MLOPS-Complete-ML-Pipeline/
+│
+├── src/                        ← All Python pipeline scripts
+│   ├── data_ingestion.py       ← Loads raw data, splits train/test
+│   ├── data_processing.py      ← Cleans and preprocesses data
+│   ├── feature_engnering.py    ← Applies TF-IDF feature extraction
+│   ├── model_training.py       ← Trains RandomForest model
+│   └── model_evaluation.py     ← Evaluates model, saves metrics
+│
+├── data/                       ← All data (ignored by Git, tracked by DVC)
+│   ├── raw/                    ← Original train/test CSV files
+│   ├── interim/                ← Preprocessed data
+│   └── processed/              ← TF-IDF features (final input to model)
+│
+├── models/                     ← Saved model (ignored by Git, tracked by DVC)
+│   └── model.pkl
+│
+├── reports/                    ← Metrics output (ignored by Git)
+│   └── metrics.json            ← accuracy, precision, recall, auc
+│
+├── logs/                       ← Log files from each stage
+├── experiments/                ← Jupyter notebooks
+├── dvclive/                    ← DVC experiment tracking output
+│   └── params.yaml             ← DO NOT edit this for pipeline (read only)
+│
+├── params.yaml                 ← ★ MAIN PARAMS FILE — edit this for experiments
+├── dvc.yaml                    ← DVC pipeline stages definition
+├── dvc.lock                    ← MD5 hashes of all data/model files (auto-generated)
+├── .gitignore                  ← Tells Git what to ignore
+└── .dvc/                       ← DVC internal folder
+
+
+================================================================================
+SECTION 2: GIT — BASIC COMMANDS & PURPOSE
+================================================================================
+
+COMMAND                         PURPOSE
+─────────────────────────────────────────────────────────────────────────────
+git init                        Initialize git in a folder (only once)
+git remote -v                   Check which GitHub repo is connected
+git status                      See what files changed / what is staged
+git add .                       Stage ALL changed files for commit
+git add <filename>              Stage a specific file only
+git commit -m "message"         Save staged changes with a message
+git push origin main            Upload commits to GitHub
+git log --oneline               See all commits (short view)
+git log --oneline -5            See last 5 commits only
+git diff                        See what changed in files (unstaged)
+git diff <hash1> <hash2>        Compare two commits
+git checkout <commit-hash>      Go back to an old commit (time travel)
+git checkout main               Come back to latest (main branch)
+─────────────────────────────────────────────────────────────────────────────
+
+IMPORTANT RULES:
+  ✅ Always use:   git commit -m "your message"
+  ❌ Never use:    git commit -a "message"    → This will get STUCK in VIM!
+  ❌ Never use:    git commit -1 "message"    → Wrong flag, causes error!
+  ❌ Never use:    < > brackets in commands   → PowerShell error!
+
+LOCK FILE ERROR FIX:
+  If you see: "fatal: Unable to create .git/index.lock"
+  Run this:   Remove-Item ".git\index.lock"
+  This happens when a previous git process got stuck.
+
+
+================================================================================
+SECTION 3: .GITIGNORE — WHAT TO IGNORE
+================================================================================
+
+The .gitignore file tells Git: "Do NOT track these files/folders"
+
+Our project ignores:
+  data/          ← Large data files (tracked by DVC instead)
+  models/        ← Large model files (tracked by DVC instead)
+  reports/       ← Output metrics
+
+HOW TO ADD TO .GITIGNORE:
+  1. Open the ROOT .gitignore file (not .dvc/.gitignore)
+  2. Add the folder names at the bottom:
+       data/
+       models/
+       reports/
+  3. Save the file
+
+NOTE: If folders were NEVER committed before, you do NOT need to run
+      "git rm --cached". The error "pathspec did not match" means
+      those folders were never tracked — that's GOOD!
+
+
+================================================================================
+SECTION 4: DVC — DATA VERSION CONTROL COMMANDS
+================================================================================
+
+COMMAND                         PURPOSE
+─────────────────────────────────────────────────────────────────────────────
+dvc init                        Initialize DVC (only once per project)
+dvc repro                       Re-run pipeline stages that have changed
+dvc dag                         Show visual pipeline flowchart
+dvc metrics show                Show current accuracy, precision, recall, auc
+dvc metrics diff                Compare metrics between current and previous run
+dvc exp show                    Show all experiments in a table
+dvc exp run                     Run pipeline AND save as a named experiment
+dvc checkout                    Restore data files matching current dvc.lock
+dvc push                        Upload data to remote DVC storage
+dvc pull                        Download data from remote DVC storage
+─────────────────────────────────────────────────────────────────────────────
+
+DVC PIPELINE STAGES (from dvc.yaml):
+  Stage 1: data_ingestion      → python src/data_ingestion.py
+  Stage 2: data_preprocessing  → python src/data_processing.py
+  Stage 3: feature_engineering → python src/feature_engnering.py
+  Stage 4: model_building      → python src/model_training.py
+  Stage 5: model_evaluation    → python src/model_evaluation.py
+
+HOW DVC DECIDES WHAT TO RE-RUN:
+  - DVC compares current files with hashes saved in dvc.lock
+  - If params changed   → re-run affected stages
+  - If code changed     → re-run affected stages
+  - If nothing changed  → skip (shows "didn't change, skipping")
+
+DVC DAG VISUAL OUTPUT:
+  +----------------+
+  | data_ingestion |
+  +----------------+
+          ↓
+  +--------------------+
+  | data_preprocessing |
+  +--------------------+
+          ↓
+  +---------------------+
+  | feature_engineering |
+  +---------------------+
+          ↓
+  +----------------+
+  | model_building |
+  +----------------+
+          ↓
+  +------------------+
+  | model_evaluation |
+  +------------------+
+
+
+================================================================================
+SECTION 5: PARAMS.YAML — HOW TO CHANGE EXPERIMENTS
+================================================================================
+
+FILE LOCATION: params.yaml  (ROOT of project — this is the CORRECT file!)
+WARNING: DO NOT edit dvclive/params.yaml — DVC does NOT read that for pipeline!
+
+CURRENT PARAMS STRUCTURE:
+  data_ingestion:
+    test_size: 0.2          ← What % of data goes to testing (0.1 = 10%)
+
+  feature_engineering:
+    max_features: 30        ← How many TF-IDF features to extract
+
+  model_building:
+    n_estimators: 50        ← Number of trees in RandomForest
+    random_state: 42        ← Random seed (for reproducibility)
+
+WORKFLOW AFTER EDITING params.yaml:
+  Step 1: Edit params.yaml  (change test_size, max_features, etc.)
+  Step 2: dvc repro          (re-runs changed stages automatically)
+  Step 3: dvc metrics show   (see new accuracy/precision/recall/auc)
+  Step 4: dvc metrics diff   (compare new vs old results)
+  Step 5: git add .
+  Step 6: git commit -m "experiment: changed <what you changed>"
+  Step 7: git push origin main
+
+EFFECT OF test_size CHANGE (EXAMPLE):
+  test_size: 0.3  → Train=70% rows, Test=30% rows
+  test_size: 0.2  → Train=80% rows, Test=20% rows  (more training data)
+  test_size: 0.1  → Train=90% rows, Test=10% rows  (even more training data)
+
+
+================================================================================
+SECTION 6: MD5 HASH — WHAT IT IS AND WHY IT MATTERS
+================================================================================
+
+MD5 = A unique "fingerprint" of any file.
+
+EXAMPLE:
+  models/model.pkl (old) → MD5: 52883503e6435de1a7db2906c07366c5
+  models/model.pkl (new) → MD5: 1d6b7ffecd7efeb32e08e68770c3cacb
+  (Even a tiny change in the model creates a completely different MD5!)
+
+WHY DVC USES MD5:
+  - DVC does NOT store data in Git (data is too large)
+  - Instead DVC stores the MD5 hash in dvc.lock
+  - Git commits dvc.lock (the MD5 addresses)
+  - DVC cache stores the actual files
+  - When you checkout an old commit → dvc.lock has old MD5 → DVC finds old file!
+
+dvc.lock EXAMPLE:
+  stages:
+    data_ingestion:
+      params:
+        params.yaml:
+          data_ingestion.test_size: 0.2     ← param saved here
+      outs:
+      - path: data/raw
+        hash: md5
+        md5: 1710314c4c6abd656387bde04d250ced.dir   ← fingerprint of data/raw/
+
+CHAIN REACTION (when params change):
+  params.yaml changes
+      ↓
+  data/raw   new MD5  (different train/test split)
+      ↓
+  data/interim   new MD5  (preprocessed differently)
+      ↓
+  data/processed   new MD5  (different features)
+      ↓
+  models/model.pkl   new MD5  (new model trained)
+      ↓
+  reports/metrics.json   new MD5  (new results)
+
+
+================================================================================
+SECTION 7: GIT + DVC WORKING TOGETHER
+================================================================================
+
+GIT tracks:        DVC tracks:
+  - src/*.py         - data/raw/
+  - params.yaml      - data/interim/
+  - dvc.yaml         - data/processed/
+  - dvc.lock         - models/model.pkl
+  - .gitignore       - reports/metrics.json
+
+KEY CONCEPT:
+  - Git stores dvc.lock (which contains MD5 hashes = addresses of data)
+  - DVC stores actual data files in .dvc/cache/
+  - Together they give you FULL history of code + data + models!
+
+GOING BACK TO OLD EXPERIMENT:
+  git checkout <old-commit-hash>    ← restores old code + old dvc.lock
+  dvc checkout                      ← restores old data + old model
+
+COMING BACK TO LATEST:
+  git checkout main                 ← restores latest code
+  dvc checkout                      ← restores latest data
+
+OUTPUT MEANING:
+  "D  data\raw\"    → D = Deleted (old data removed, different version coming)
+  "A  data\raw\"    → A = Added   (new/restored data placed)
+
+
+================================================================================
+SECTION 8: DETACHED HEAD — WHAT IT MEANS
+================================================================================
+
+When you run: git checkout <old-commit-hash>
+You get:      "You are in 'detached HEAD' state"
+
+MEANING:
+  - You are READING old history (like opening an old book)
+  - You are NOT on any branch
+  - If you make changes here, they won't be saved properly!
+  - It is SAFE to look around, but do NOT commit from here
+
+TO GET BACK TO NORMAL:
+  git checkout main
+  dvc checkout
+
+
+================================================================================
+SECTION 9: CHECKING HISTORY & HASHES
+================================================================================
+
+SEE ALL COMMITS:
+  git log --oneline
+
+FIND COMMITS THAT HAVE dvc.lock:
+  git log --oneline --all -- dvc.lock
+
+SEE dvc.lock AT A SPECIFIC COMMIT:
+  git show <commit-hash>:dvc.lock
+  Example: git show a0cfc4f:dvc.lock
+
+COMPARE dvc.lock BETWEEN TWO COMMITS:
+  git diff <old-hash> <new-hash> -- dvc.lock
+  Example: git diff a0cfc4f 8e3b1c5 -- dvc.lock
+
+COMPARE params.yaml BETWEEN TWO COMMITS:
+  git diff <old-hash> <new-hash> -- params.yaml
+
+FIND SPECIFIC FILE HASH IN A COMMIT:
+  git show <commit-hash>:dvc.lock | findstr "model.pkl"
+
+
+================================================================================
+SECTION 10: COMPLETE EXPERIMENT WORKFLOW (DO THIS EVERY TIME)
+================================================================================
+
+STEP 1 — Edit params.yaml (ROOT file only!):
+  Open: params.yaml
+  Change: test_size, max_features, n_estimators, random_state
+
+STEP 2 — Run DVC pipeline:
+  dvc repro
+
+STEP 3 — Check results:
+  dvc metrics show
+  dvc metrics diff
+
+STEP 4 — Commit to Git:
+  git add .
+  git commit -m "experiment: test_size=X, max_features=Y"
+  git push origin main
+
+STEP 5 — (Optional) See all experiments:
+  dvc exp show
+
+
+================================================================================
+SECTION 11: COMMON ERRORS & FIXES
+================================================================================
+
+ERROR: git commit -a "message" → fatal: paths ... does not make sense
+FIX:   Always use -m flag:  git commit -m "your message"
+
+ERROR: fatal: Unable to create .git/index.lock
+FIX:   Remove-Item ".git\index.lock"
+       (A previous git process got stuck)
+
+ERROR: fatal: path 'dvc.lock' does not exist in 'commit-hash'
+FIX:   That commit is before DVC was set up. Use a later commit.
+
+ERROR: dvc.lock ... is busy, blocked by another process
+FIX:   Remove-Item ".dvc\tmp\rwlock"
+       (A previous dvc repro got stuck)
+
+ERROR: Stage '...' didn't change, skipping (nothing runs)
+FIX:   You edited the WRONG params file!
+       Make sure you edit ROOT params.yaml, NOT dvclive/params.yaml
+
+ERROR: git show <hash>:dvc.lock  → The '<' operator is reserved
+FIX:   Do NOT use < > brackets! Write hash directly:
+       git show a0cfc4f:dvc.lock
+
+
+================================================================================
+SECTION 12: QUICK REFERENCE — MOST USED COMMANDS
+================================================================================
+
+Daily Use:
+  git status                       → Check what changed
+  git add .                        → Stage all changes
+  git commit -m "message"          → Save with message
+  git push origin main             → Upload to GitHub
+  git log --oneline                → See commit history
+
+Experiments:
+  dvc repro                        → Run pipeline
+  dvc metrics show                 → See results
+  dvc metrics diff                 → Compare results
+  dvc dag                          → See pipeline flowchart
+
+Time Travel:
+  git checkout <hash>              → Go to old commit
+  dvc checkout                     → Restore matching data
+  git checkout main                → Come back to latest
+
+Debugging:
+  git diff <hash1> <hash2> -- dvc.lock     → Compare hashes
+  git diff <hash1> <hash2> -- params.yaml  → Compare params
+  git log --oneline --all -- dvc.lock      → Find commits with dvc.lock
+
+
+================================================================================
+                    END OF GUIDE — HAPPY CODING! 🚀
+================================================================================
